@@ -1,0 +1,8 @@
+data/
+.*
+!/.gitignore
+geometry_check/icao-venv/
+neutralface/dlib/
+neutralface/*.tar.*
+neutralface/*.run
+*.jpg
