@@ -1,4 +1,5 @@
 data/
+docker_backups/
 .*
 !/.gitignore
 geometry_check/icao-venv/
