@@ -25,26 +25,30 @@ int main(int argc, char** argv) {
         pyramid_up(img);
 
         std::vector<rectangle> dets = detector(img);
-        if(dets.size() > 0) {
+        if(dets.size() > 0) { //crash when no pics available
           full_object_detection shape = sp(img, dets[0]);
 
           bool bSmiling = false;
           bool bOpenmouth = false;
           
-          if((shape.part(67).y() - shape.part(61).y()) > 2 ||
-             (shape.part(66).y() - shape.part(62).y()) > 2 ||
-             (shape.part(65).y() - shape.part(63).y()) > 2) 
+          if((shape.part(67).y() - shape.part(61).y()) > 20 ||
+             (shape.part(66).y() - shape.part(62).y()) > 20 ||
+             (shape.part(65).y() - shape.part(63).y()) > 20) 
               bOpenmouth = true;
-          if((shape.part(62).y() - shape.part(60).y()) > 5 ||
-             (shape.part(62).y() - shape.part(64).y()) > 5 ||
-             (shape.part(62).y() - shape.part(48).y()) > 10 ||
-             (shape.part(62).y() - shape.part(54).y()) > 10 ||
-             (shape.part(57).y() - shape.part(48).y()) > 15 ||
-             (shape.part(57).y() - shape.part(54).y()) > 15) 
+          if((shape.part(62).y() - shape.part(60).y()) > 20 &&
+             (shape.part(62).y() - shape.part(64).y()) > 20 &&
+             (shape.part(62).y() - shape.part(48).y()) > 25 &&
+             (shape.part(62).y() - shape.part(54).y()) > 25 &&
+             ((shape.part(60).y() - shape.part(48).y()) > 5 ||
+             (shape.part(64).y() - shape.part(54).y()) > 5))  
               bSmiling = true;
 
-          std::cout << "{\"smiling\":" << (bSmiling?"true":"false") << ",";
-          std::cout << "\"openmouth\":" << (bOpenmouth?"true":"false") << "}";
+          bool bNeutral = false;
+          if(!bSmiling && !bOpenmouth) bNeutral = true;
+
+          std::cout << "{\"not_smiling\":" << (bSmiling?"false":"true") << ",";
+          std::cout << "\"shut_mouth\":" << (bOpenmouth?"false":"true") << ",";
+          std::cout << "\"neutral_expression\":" << (bNeutral?"true":"false") << "}";
         } else {
           std::cout << "{}";
         }
