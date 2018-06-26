@@ -76,7 +76,6 @@ def ad_icaocheck():
         output['Error'] = output.get(
             'Error', '') + 'error executing neutral_face;'
         output['Error_msg'] = output.get('Error_msg', '') + e.output.decode()
-        console.log(e)
     except ValueError:
         output['correctly_executed'] = False
         output['Error'] = output.get(
