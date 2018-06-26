@@ -1,7 +1,9 @@
 <html>
+
 <head>
 	<title> ICAO Check </title>
 </head>
+
 <body>
 	<style>
 		.thumb {
@@ -9,10 +11,66 @@
 			border: 1px solid #000;
 			margin: 10px 5px 0 0;
 		}
+
+		table {
+			font-family: Verdana;
+			font-weight: normal;
+			font-size: 1em;
+			color: #404040;
+			width: 80%;
+			background-color: #fafafa;
+			border: 1px #6699CC solid;
+			border-collapse: collapse;
+			border-spacing: 0px;
+			margin-top: 0px;
+		}
+
+		table thead {
+			border-bottom: 2px solid #6699CC;
+			background-color: #BEC8D1;
+			text-align: center;
+			font-family: Verdana;
+			font-weight: bold;
+			font-size: 1em;
+			color: #404040;
+		}
+
+		table tbody {
+			border-bottom: 1px dotted #6699CC;
+			font-family: Verdana, sans-serif, Arial;
+			font-weight: normal;
+			font-size: 1em;
+			color: #404040;
+			background-color: white;
+			text-align: right;
+			padding-left: 3px;
+		}
+
+		#everything_ok {
+			width: 80%;
+			text-align: center;
+			font-family: Verdana;
+			font-weight: bold;
+			font-size: 2em;
+		}
+
+		.servBodL {
+			border-left: 1px dotted #CEDCEA;
+		}
 	</style>
 
 	<input type="file" id="files" name="files[]" multiple />
 	<output id="list"></output>
+	<br/>
+	<table>
+		<thead>
+			<td>Key</td>
+			<td>Value</td>
+		</thead>
+		<tbody id='data_table' />
+	</table>
+	<br/>
+	<div id="everything_ok"> </div>
 
 	<script>
 		function handleFileSelect(evt) {
@@ -34,11 +92,45 @@
 					// console.log('RESULT', b64_img);
 
 					var xhr = new XMLHttpRequest();
+					xhr.responseType = 'json';
 					xhr.open('POST', '/api/icaochecker');
 					xhr.setRequestHeader('Content-Type', 'application/json');
 					xhr.onreadystatechange = function() {
 						if (xhr.readyState == 4 && xhr.status == 200) {
-							console.log('SERVER ANSWER', xhr.responseText);
+							var rdata = xhr.response;
+							console.log('SERVER ANSWER:', JSON.stringify(rdata));
+							var old_tbody = document.getElementById('data_table');
+							var new_tbody = document.createElement('tbody');
+							everything_ok = true;
+							for (var key in rdata) {
+								if (rdata.hasOwnProperty(key)) {
+									console.log(key + " -> " + rdata[key]);
+									var tr = new_tbody.insertRow();
+									var td_name = tr.insertCell();
+									var td_val = tr.insertCell();
+									td_name.appendChild(document.createTextNode(key));
+									td_val.appendChild(document.createTextNode(rdata[key]));
+									if (typeof(rdata[key]) == typeof(true)) {
+										if (rdata[key]) {
+											td_val.style.color = "#00AA00";
+										} else {
+											td_val.style.color = "#AA0000";
+											everything_ok = false;
+										}
+									}
+
+								}
+							}
+							old_tbody.parentNode.replaceChild(new_tbody, old_tbody);
+
+							new_tbody.id = 'data_table';
+
+							okdiv = document.getElementById("everything_ok");
+							if(everything_ok){
+								okdiv.innerHTML = "Passed."
+							}else{
+								okdiv.innerHTML = "Not Passed."
+							}
 						}
 					}
 					data = {

@@ -55,9 +55,11 @@ def ad_icaocheck():
         )
         output.update(json.loads(o))
     except CalledProcessError:
+        output['correctly_executed'] = False
         output['Error'] = output.get(
             'Error', '') + 'error executing geometry_check;'
     except ValueError:
+        output['correctly_executed'] = False
         output['Error'] = output.get(
             'Error', '') + 'JSON parsing error geometry_check;'
 
@@ -69,12 +71,17 @@ def ad_icaocheck():
             timeout=180
         )
         output.update(json.loads(o))
-    except CalledProcessError:
+    except CalledProcessError as e:
+        output['correctly_executed'] = False
         output['Error'] = output.get(
             'Error', '') + 'error executing neutral_face;'
+        output['Error_msg'] = output.get('Error_msg', '') + e.output.decode()
+        console.log(e)
     except ValueError:
+        output['correctly_executed'] = False
         output['Error'] = output.get(
             'Error', '') + 'JSON parsing error neutral_face;'
+        output['Error_msg'] = output.get('Error_msg', '') + o
 
     f.close()
 

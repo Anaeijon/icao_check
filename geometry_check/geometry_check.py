@@ -179,14 +179,14 @@ def main(argv):
         "face_detected": False,
         "single_face": False,
         "h_line_almost_horizontal": False,
-        "h_line_rotation": 1,
+        "h_line_rotation": None,
         "v_line_almost_vertical": False,
-        "v_line_rotation": 1,
+        "v_line_rotation": None,
         "midpoint_in_vertical_center": False,
         "midpoint_in_upper_half": False,
         "midpoint": None,
         "head_width_correct": False,
-        "head_width_ratio": 1
+        "head_width_ratio": None
     })
 
     # CHECKS STARTING HERE:
