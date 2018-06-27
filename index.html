@@ -63,21 +63,23 @@
 		}
 	</style>
 
+	<!-- Input Form -->
 	<form class="center" style="text-align: center;">
 		Please select image file or drag&drop one.<br/>
+		<!-- file input: will run script when file selected -->
 		<input type="file" id="files" name="files[]"/>
-		<!-- <output id="list"></output> -->
 		<br/>
 		<input
 			type="checkbox"
-			name="autorotate"
-			id="autorotate" />
-		<label for="autorotate">
+			name="autotransform"
+			id="autotransform" />
+		<label for="autotransform">
 			automatically rotate and crop if possible
 		</label>
 	</form>
 	<br/>
 
+	<!-- This div will display if the image passed all checks -->
 	<div id="everything_ok" class="center"> </div>
 	<br/>
 
@@ -86,6 +88,7 @@
 	</div>
 	<br/>
 
+	<!-- table for displaying received json data -->
 	<table class="center" id="data_table">
 		<thead>
 			<td>Key</td>
@@ -98,6 +101,7 @@
 
 	<script>
 		function handleFileSelect(evt) {
+			// these colors will be used to display if the check is positive or not
 			var truecolor = "ForestGreen";
 			var falsecolor = "FireBrick";
 
@@ -114,6 +118,7 @@
 				var reader = new FileReader();
 
 				reader.onload = function() {
+					// load image file b64 encoded
 					b64_img = encodeURIComponent(reader.result.split(',')[1]);
 					b64_img = (reader.result.split(',')[1]);
 					// console.log('RESULT', b64_img);
@@ -127,9 +132,17 @@
 							var rdata = xhr.response;
 							console.log('SERVER ANSWER:', JSON.stringify(rdata, null, 4));
 							var data_table = document.getElementById('data_table');
+							// old tbody shall be removed and replaced completely:
 							var old_tbody = document.getElementById('data_table_body');
+							// new tbody to replace old tbody:
 							var new_tbody = document.createElement('tbody');
+
+							// this is assumed true at first
+							// once one check fails, it is changed to false
+							// it is important for the "Passed/Not Passed" output
 							everything_ok = true;
+
+							// simply display all json data for now:
 							for (var key in rdata) {
 								if (rdata.hasOwnProperty(key)) {
 									console.log(key + " -> " + rdata[key]);
@@ -149,10 +162,12 @@
 
 								}
 							}
+							// remove old tbody and replace by newly created one
 							old_tbody.parentNode.replaceChild(new_tbody, old_tbody);
+							// set id to find tbody again
+							new_tbody.id = 'data_table_body';
 
-							new_tbody.id = 'data_table';
-
+							// change text and color of "Passed./Not Passed." div
 							okdiv = document.getElementById("everything_ok");
 							if (everything_ok) {
 								okdiv.style.color = truecolor;
@@ -163,8 +178,13 @@
 							}
 						}
 					}
+
+					// get status of autotransform checkbox
+					autotransform_box = document.getElementById('autotransform');
+					// generate request object to send to server
 					data = {
 						'clientQueryId': 1,
+						'autotransform': autotransform_box.checked,
 						'imageData': {
 							documentImage: b64_img
 						}
