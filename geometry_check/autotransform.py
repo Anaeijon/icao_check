@@ -64,6 +64,20 @@ def check_for_needed_files(datadir: Path):
                 newfile.rename(file)
 
 
+# origin vectors o1, o2
+# direction vectors d1, d2 (normalized)
+def line_intersection(o1, d1, o2, d2):
+    u = (o1[1] * d2[0] + d2[1] * o2[0] - o2[1] * d2[0] -
+         d2[1] * o1[0]) / (d1[0] * d2[1] - d1[1] * d2[0])
+    p = o1 + d1 * u
+    return(p)
+
+
+# rotate a vector counter clockwise
+def rotate_left(v):
+    return np.array([-v[0], v[1]])
+
+
 class Face:
     pass
 
@@ -159,8 +173,95 @@ class Face:
     def eye_center(self):
         return (self.eye_left() + self.eye_right()) / 2
 
+    def chin(self):
+        return self._shape[8] * 1
+
+    def ear_left(self):
+        return self._shape[0] * 1
+
+    def ear_right(self):
+        return self._shape[16] * 1
+
+    def midpoint(self):
+        return self.eye_center()
+
     def mouth_center(self):
         return np.sum(self._shape[48:60], axis=0) / 12
+
+    def h_line_direction(self):
+        h = self.eye_right() - self.eye_center()
+        return h / np.linalg.norm(h)
+
+    def v_line_direction(self):
+        v = self.mouth_center() - self.eye_center()
+        return v / np.linalg.norm(v)
+
+    def left_eye_distance(self):
+        return np.linalg.norm(self.eye_left() - self.eye_center())
+
+    def right_eye_distance(self):
+        return np.linalg.norm(self.eye_right() - self.eye_center())
+
+    def chin_distance(self):
+        return np.linalg.norm(self.chin() - self.eye_center())
+
+    def bottom_left_corner(self):
+        chin2 = line_intersection(self.chin(),
+                                  self.h_line_direction(),
+                                  self.eye_center(),
+                                  rotate_left(self.h_line_direction()))
+        ear_l = line_intersection(self.ear_left(),
+                                  rotate_left(self.h_line_direction()),
+                                  self.eye_center(),
+                                  self.h_line_direction())
+        return line_intersection(chin2,
+                                 self.h_line_direction(),
+                                 ear_l,
+                                 rotate_left(self.h_line_direction()))
+
+    def bottom_right_corner(self):
+        chin2 = line_intersection(self.chin(),
+                                  self.h_line_direction(),
+                                  self.eye_center(),
+                                  rotate_left(self.h_line_direction()))
+        ear_r = line_intersection(self.ear_right(),
+                                  rotate_left(self.h_line_direction()),
+                                  self.eye_center(),
+                                  self.h_line_direction())
+        return line_intersection(chin2,
+                                 self.h_line_direction(),
+                                 ear_r,
+                                 rotate_left(self.h_line_direction()))
+
+    def top_left_corner(self):
+        chin2 = line_intersection(self.chin(),
+                                  self.h_line_direction(),
+                                  self.eye_center(),
+                                  rotate_left(self.h_line_direction()))
+        fake_forehead = self.eye_center() + (self.eye_center() - chin2)
+        ear_l = line_intersection(self.ear_left(),
+                                  rotate_left(self.h_line_direction()),
+                                  self.eye_center(),
+                                  self.h_line_direction())
+        return line_intersection(fake_forehead,
+                                 self.h_line_direction(),
+                                 ear_l,
+                                 rotate_left(self.h_line_direction()))
+
+    def top_right_corner(self):
+        chin2 = line_intersection(self.chin(),
+                                  self.h_line_direction(),
+                                  self.eye_center(),
+                                  rotate_left(self.h_line_direction()))
+        fake_forehead = self.eye_center() + (self.eye_center() - chin2)
+        ear_r = line_intersection(self.ear_right(),
+                                  rotate_left(self.h_line_direction()),
+                                  self.eye_center(),
+                                  self.h_line_direction())
+        return line_intersection(fake_forehead,
+                                 self.h_line_direction(),
+                                 ear_r,
+                                 rotate_left(self.h_line_direction()))
 
 
 def main(argv):
@@ -175,69 +276,21 @@ def main(argv):
         return 1
 
     checks = dict({
-        "ratio_correct": False,
-        "face_detected": False,
-        "single_face": False,
-        "h_line_almost_horizontal": False,
-        "h_line_rotation": None,
-        "v_line_almost_vertical": False,
-        "v_line_rotation": None,
-        "midpoint_in_vertical_center": False,
-        "midpoint_in_upper_half": False,
-        "midpoint": None,
-        "head_width_correct": False,
-        "head_width_ratio": None
+        "top_left_corner": None,
+        "top_right_corner": None,
+        "bottom_left_corner": None,
+        "bottom_right_corner": None
     })
 
     # CHECKS STARTING HERE:
     analyzer = image_analyzer(argv[1])
-    checks["ratio_correct"] = bool(analyzer.check_image_ratio(min=0.74, max=0.80))
     faces = [f for f in analyzer.faces()]
-    checks["face_detected"] = bool(len(faces) > 0)
     if len(faces) == 1:
-        checks["single_face"] = True
         face = faces[0]
-        #   I: H line almost horizontal:
-        #      (f.eye_left()-f.eye_right())[1] rund 0
-        #          abs( -||- / ana.height() ) < 0.01 # weniger als 1% rotation
-        h_rotation = (face.eye_left() - face.eye_right()
-                      )[1] / analyzer.height()
-        checks["h_line_almost_horizontal"] = bool(abs(h_rotation) < 0.01)
-        checks["h_line_rotation"] = float(h_rotation)
-
-        #  II: V line almost vertical,
-        #      H line is more important, because V and H don't need to be perpendicular
-        #       (f.eye_center()-f.mouth_center())[0] rund 0
-        #          abs( -||- / ana.width() ) < 0.05 # weniger als 5% rotation
-        v_rotation = (face.eye_center() - face.mouth_center())[0] / analyzer.width()
-        checks["v_line_almost_vertical"] = bool(abs(v_rotation) < 0.05)
-        checks["v_line_rotation"] = float(v_rotation)
-
-        # III: Midpoint M needs to be in horizontal center and vertically 30%-50% from top
-        #      f.eye_center()/[ana.width(),ana.height()] = [ 0.45 <= x <= 0.55 , 0.30 <= y <= 0.50 ]
-        m_rel = face.eye_center() / [analyzer.width(), analyzer.height()]
-        checks["midpoint_in_vertical_center"] = bool((m_rel[0] >= 0.45) and (m_rel[0] <= 0.55))
-        checks["midpoint_in_upper_half"] = bool((m_rel[1] >= 0.30) and (m_rel[1] <= 0.50))
-        checks["midpoint"] = [float(d) for d in m_rel]
-
-        #  IV: Headwith ratio
-        head_width_ratio = face.rect().width() / analyzer.width()
-        checks["head_width_correct"] = bool((head_width_ratio >= 0.5) and (head_width_ratio <= 0.75))
-        checks["head_width_ratio"] = float(head_width_ratio)
-
-        if show_rectangle:
-            img = analyzer.img()
-            cv2.namedWindow("Bild", cv2.WND_PROP_FULLSCREEN)
-            cv2.setWindowProperty("Bild", cv2.WND_PROP_FULLSCREEN,
-                                  cv2.WINDOW_FULLSCREEN)
-            rect = face.rect()
-            cv2.rectangle(img, (rect.left(), rect.top()), (rect.right(), rect.bottom()),  (0, 255, 255))
-            cv2.imshow("Bild", img)
-            while(1):
-                k = cv2.waitKey(33)
-                if k == 27 or k == ord('q'):    # Esc key or q to stop
-                    cv2.destroyAllWindows()
-                    break
+        checks["top_left_corner"] = [float(d) for d in face.top_left_corner()]
+        checks["top_right_corner"] =  [float(d) for d in face.top_right_corner()]
+        checks["bottom_left_corner"] =  [float(d) for d in face.bottom_left_corner()]
+        checks["bottom_right_corner"] =  [float(d) for d in face.bottom_right_corner()]
 
     return checks
 

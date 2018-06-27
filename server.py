@@ -37,16 +37,16 @@ def ad_icaocheck():
     # get b64 encoded image from json request
     img_base64 = base64.b64decode(request.json['imageData']['documentImage'])
 
-    # get autorotate boolean; assume false, if not present
-    autorotate = 'autorotate' in request.json and \
-                 type(request.json['autorotate']) is bool and \
-                 request.json['autorotate']
+    # get autotransform boolean; assume false, if not present
+    autotransform = 'autotransform' in request.json and \
+        type(request.json['autotransform']) is bool and \
+        request.json['autotransform']
 
     # image needs to be jpeg or png
     fmt = imghdr.what('foo', img_base64)
     if not (fmt == 'jpeg' or fmt == 'png'):
         return jsonify({'message': 'false image file format, jpg or png file is expected'}), 400
-    # print("autorotate is " + ("on" if autorotate else "off"))
+    # print("autotransform is " + ("on" if autotransform else "off"))
 
     # dump image to file
     # Idea: In future just give base64 data directly to subprocesses,
@@ -59,32 +59,32 @@ def ad_icaocheck():
 
     ###################################################
     # Run AUTOROTATION
-    #     by David Döring
+    #     by David Doering
     ###################################################
-    if autorotate:
+    if autotransform:
         try:
             o = check_output(
                 ['./geometry_check/icao-venv/bin/python3',
-                 './geometry_check/autorotate.py',
+                 './geometry_check/autotransform.py',
                  f.name],
                 timeout=180
             )
             odct = json.loads(o)
-            editdct = dict(("autorotate_" + key, value)
+            editdct = dict(("autotransform_" + key, value)
                            for (key, value) in odct.items())
             output.update(editdct)
         except CalledProcessError:
             output['correctly_executed'] = False
             output['Error'] = output.get(
-                'Error', '') + 'error executing autorotate;'
+                'Error', '') + 'error executing autotransform;'
         except ValueError:
             output['correctly_executed'] = False
             output['Error'] = output.get(
-                'Error', '') + 'JSON parsing error autorotate;'
+                'Error', '') + 'JSON parsing error autotransform;'
 
     ###################################################
     # Run GEOMETRY CHECK
-    #     by David Döring
+    #     by David Doering
     ###################################################
     try:
         o = check_output(
