@@ -75,7 +75,7 @@ def line_intersection(o1, d1, o2, d2):
 
 # rotate a vector counter clockwise
 def rotate_left(v):
-    return np.array([-v[0], v[1]])
+    return np.array([-v[1], v[0]])
 
 
 class Face:
@@ -265,21 +265,12 @@ class Face:
 
 
 def main(argv):
-    if len(argv) < 2:
-        print("missing image file", file=sys.stderr)
-        print("run: $ python3 geometry_check.py /path/to/image/file", file=sys.stderr)
-        return 1
-
-    if not hasattr(cv2, 'face'):
-        print("you need to install opencv2-contrib-python", file=sys.stderr)
-        print("$ pip install opencv2-contrib-python", file=sys.stderr)
-        return 1
-
     checks = dict({
         "top_left_corner": None,
         "top_right_corner": None,
         "bottom_left_corner": None,
-        "bottom_right_corner": None
+        "bottom_right_corner": None,
+        "transformable": False
     })
 
     # CHECKS STARTING HERE:
@@ -287,11 +278,23 @@ def main(argv):
     faces = [f for f in analyzer.faces()]
     if len(faces) == 1:
         face = faces[0]
-        checks["top_left_corner"] = [float(d) for d in face.top_left_corner()]
-        checks["top_right_corner"] =  [float(d) for d in face.top_right_corner()]
-        checks["bottom_left_corner"] =  [float(d) for d in face.bottom_left_corner()]
-        checks["bottom_right_corner"] =  [float(d) for d in face.bottom_right_corner()]
-
+        tl = face.top_left_corner()
+        tr = face.top_right_corner()
+        bl = face.bottom_left_corner()
+        br = face.bottom_right_corner()
+        checks["top_left_corner"] = [float(d) for d in tl]
+        checks["top_right_corner"] = [float(d) for d in tr]
+        checks["bottom_left_corner"] = [float(d) for d in bl]
+        checks["bottom_right_corner"] = [float(d) for d in br]
+        checks["transformable"] = bool(
+            0 <= tl[0] <= analyzer.width() and
+            0 <= tl[1] <= analyzer.height() and
+            0 <= tr[0] <= analyzer.width() and
+            0 <= tr[1] <= analyzer.height() and
+            0 <= bl[0] <= analyzer.width() and
+            0 <= bl[1] <= analyzer.height() and
+            0 <= br[0] <= analyzer.width() and
+            0 <= br[1] <= analyzer.height())
     return checks
 
 
