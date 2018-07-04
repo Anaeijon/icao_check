@@ -55,7 +55,9 @@ def ad_icaocheck():
     f.write(img_base64)
     f.seek(0)
 
+    # output dict will be returned to client
     output = dict()
+    # output['imageData'] = dict({'documentImage': base64.b64encode(img_base64)})
 
     ###################################################
     # Run AUTOROTATION

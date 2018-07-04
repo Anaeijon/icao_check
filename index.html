@@ -67,12 +67,9 @@
 	<form class="center" style="text-align: center;">
 		Please select image file or drag&drop one.<br/>
 		<!-- file input: will run script when file selected -->
-		<input type="file" id="files" name="files[]"/>
+		<input type="file" id="files" name="files[]" />
 		<br/>
-		<input
-			type="checkbox"
-			name="autotransform"
-			id="autotransform" />
+		<input type="checkbox" name="autotransform" id="autotransform" />
 		<label for="autotransform">
 			automatically rotate and crop if possible
 		</label>
@@ -84,7 +81,16 @@
 	<br/>
 
 	<div class="center">
-
+		<svg id="image_svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="480" height="640">
+			<image
+     		xlink:href=""
+     		width="480"
+     		height="640"
+				id="image_base"
+				x="0"
+				y="0"
+     		preserveaspectratio="xMidYMid"/>
+		</svg>
 	</div>
 	<br/>
 
@@ -119,8 +125,10 @@
 
 				reader.onload = function() {
 					// load image file b64 encoded
-					b64_img = encodeURIComponent(reader.result.split(',')[1]);
-					b64_img = (reader.result.split(',')[1]);
+					// b64_img = encodeURIComponent(reader.result.split(',')[1]);
+					img_data = reader.result.split(',');
+					b64_img = img_data[1];
+					b64_format = img_data[0];
 					// console.log('RESULT', b64_img);
 
 					var xhr = new XMLHttpRequest();
@@ -176,6 +184,23 @@
 								okdiv.style.color = falsecolor;
 								okdiv.innerHTML = "Not Passed.";
 							}
+
+							// display image
+							// if (
+							// 	rdata.hasOwnProperty(autotransform_top_left_corner) &&
+							// 	rdata.hasOwnProperty(autotransform_bottom_right_corner)) {
+							if (true){
+								var base_image_display = document.getElementById("image_base");
+								var image_svg = document.getElementById("image_svg");
+								base_image_display.setAttribute("x", 0);
+								base_image_display.setAttribute("y", 0);
+								base_image_display.setAttribute("height", 640);
+								base_image_display.setAttribute("width", 480);
+								image_svg.setAttribute("height", 640);
+								image_svg.setAttribute("width", 480);
+								base_image_display.setAttribute("xlink:href", reader.result);
+							}
+
 						}
 					}
 
@@ -186,10 +211,14 @@
 						'clientQueryId': 1,
 						'autotransform': autotransform_box.checked,
 						'imageData': {
+							documentType: b64_format,
 							documentImage: b64_img
 						}
 					}
+
 					xhr.send(JSON.stringify(data));
+
+
 				}
 
 				// Closure to capture the file information.
