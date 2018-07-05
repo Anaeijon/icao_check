@@ -7,3 +7,4 @@ neutralface/dlib/
 neutralface/*.tar.*
 neutralface/*.run
 *.jpg
+.*__pycache__
