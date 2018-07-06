@@ -78,23 +78,27 @@ def rotate_left(v):
     return np.array([-v[1], v[0]])
 
 
-class Face:
-    pass
+def load_image(image_path: str):
+    _path = Path(image_path)
+    if _path.exists():
+        _img = cv2.imread(str(_path.resolve()))
+        if(_img is None):
+            raise ValueError(
+                "OpenCV can't read Imagefile: " + str(_path))
+            return None
+    else:
+        raise FileNotFoundError("Imagefile not found: " + str(_path))
+        return None
+    return _img
 
 
 class image_analyzer:
-    def __init__(self, image_path: str,
-                 pretrained_predictor: str = datadir.joinpath("shape_predictor_68_face_landmarks.dat"),
+    def __init__(self, image,
+                 pretrained_predictor: str = datadir.joinpath(
+                     "shape_predictor_68_face_landmarks.dat"),
                  upsample_num_times: int = 1
                  ):
-        self._path = Path(image_path)
-        if self._path.exists():
-            self._img = cv2.imread(str(self._path.resolve()))
-            if(self._img is None):
-                raise ValueError(
-                    "OpenCV can't read Imagefile: " + str(self._path))
-        else:
-            raise FileNotFoundError("Imagefile not found: " + str(self._path))
+        self._img = image
         self._pretrained_predictor = Path(pretrained_predictor)
         self._upsample_num_times = upsample_num_times
 
@@ -263,6 +267,94 @@ class Face:
                                  ear_r,
                                  rotate_left(self.h_line_direction()))
 
+    def face_width(self):
+        return np.linalg.norm(self.top_right_corner() - self.top_left_corner())
+
+    def face_height(self):
+        return np.linalg.norm(self.top_left_corner() - self.bottom_left_corner())
+
+    def rotation_matrix(self):
+        # returns a rotation matrix which will rotate h parallel to x=(1,0)
+        h = self.h_line_direction()
+        return [[h[0],  h[1], 0],
+                [-h[1], h[0], 0],
+                [0,     0,    1]]
+
+    def translation_to_0_matrix(self):
+        # returns a translation matrix, which will move midpoint to (0,0)
+        m = self.eye_center()
+        return [[1, 0, -m[0]],
+                [0, 1, -m[1]],
+                [0, 0,     1]]
+
+    def supertransformationmatrix(self,
+                                  side_distance: float = (3 / 16),
+                                  midpoint_top_distance: float = (5 / 12),
+                                  image_ratio: float = (7 / 9)):
+        first_trans = np.dot(self.rotation_matrix(),
+                             self.translation_to_0_matrix())
+        cs = self.optimal_image_corners(side_distance=side_distance,
+                                        midpoint_top_distance=midpoint_top_distance,
+                                        image_ratio=image_ratio)
+        trans_tl = np.dot(first_trans, np.append(cs[0], 1))
+        final_trans = [[1, 0, -trans_tl[0]],
+                       [0, 1, -trans_tl[1]],
+                       [0, 0,            1]]
+        return np.dot(final_trans, first_trans)
+
+    def optimal_image_corners(self,
+                              side_distance: float = (3 / 16),
+                              midpoint_top_distance: float = (5 / 12),
+                              image_ratio: float = (7 / 9)):
+        # w = head width
+        w = self.face_width()
+        # a = image width
+        # image ratio:
+        #        0.5  <= w/a <=  0.75
+        #       (1/2) <= w/a <= (3/4)
+        # optimal w/a:
+        #       ((1/2)+(3/4))/2 = 5/8 = 0.625
+        # optimal distance from ear to image border (side_distance):
+        #       (1-(5/8))/2 = 3/16
+        a = w * (1 + 2 * side_distance)
+        # optimal picture ratio:
+        #   common professional picture ratio is 35mm/45mm
+        #   so assume (7/9) = 0.77777777
+        #   0.74 and 0.80 are ( 0.77 [+|-] 0.03 )
+        #   assuming:
+        #   (7/9)-(1/30) and (7/9)+(1/30)
+        m_to_bottom = 1 - midpoint_top_distance
+
+        # b = image height
+        b = w / image_ratio
+        leftest_on_h = self.midpoint() - self.h_line_direction() * (2 / a)
+        rightest_on_h = self.midpoint() + self.h_line_direction() * (2 / a)
+        bottom_on_ht = self.midpoint() - rotate_left(self.h_line_direction()) * m_to_bottom
+        top_on_ht = bottom_on_ht + rotate_left(self.h_line_direction()) * b
+
+        return [
+            line_intersection(
+                leftest_on_h,
+                rotate_left(self.h_line_direction()),
+                top_on_ht,
+                self.h_line_direction()),
+            line_intersection(
+                rightest_on_h,
+                rotate_left(self.h_line_direction()),
+                top_on_ht,
+                self.h_line_direction()),
+            line_intersection(
+                leftest_on_h,
+                rotate_left(self.h_line_direction()),
+                bottom_on_ht,
+                self.h_line_direction()),
+            line_intersection(
+                rightest_on_h,
+                rotate_left(self.h_line_direction()),
+                bottom_on_ht,
+                self.h_line_direction())
+        ]
+
 
 def main(argv):
     checks = dict({
@@ -274,7 +366,7 @@ def main(argv):
     })
 
     # CHECKS STARTING HERE:
-    analyzer = image_analyzer(argv[1])
+    analyzer = image_analyzer(load_image(argv[1]))
     faces = [f for f in analyzer.faces()]
     if len(faces) == 1:
         face = faces[0]
@@ -295,6 +387,8 @@ def main(argv):
             0 <= bl[1] <= analyzer.height() and
             0 <= br[0] <= analyzer.width() and
             0 <= br[1] <= analyzer.height())
+        if checks["transformable"]:
+            pass
     return checks
 
 
