@@ -80,12 +80,11 @@
 	<div id="everything_ok" class="center"> </div>
 	<br/>
 
-	<div class="center">
-		<svg id="image_svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="480" height="640">
+	<div class="center" id="image_div">
+		<div id="image_info"> </div>
+		<svg id="image_svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" >
 			<image
      		xlink:href=""
-     		width="480"
-     		height="640"
 				id="image_base"
 				x="0"
 				y="0"
@@ -106,6 +105,30 @@
 
 
 	<script>
+		function display_image(b64_format, b64_img) {
+			var img = new Image();
+			img.onload = function(){
+				var max_width = document.getElementById("image_div").clientWidth - 20;
+				var width = max_width;
+				var height = img.height * (max_width / img.width)
+				var base_image_display = document.getElementById("image_base");
+				var image_svg = document.getElementById("image_svg");
+				base_image_display.setAttribute("x", 0);
+				base_image_display.setAttribute("y", 0);
+				base_image_display.setAttribute("height", height);
+				base_image_display.setAttribute("width", width);
+				image_svg.setAttribute("height", height);
+				image_svg.setAttribute("width", width);
+				base_image_display.setAttribute("xlink:href", img.src);
+			}
+			// display image
+			// if (
+			// 	rdata.hasOwnProperty(autotransform_top_left_corner) &&
+			// 	rdata.hasOwnProperty(autotransform_bottom_right_corner)) {
+			img_data = b64_format + ',' + b64_img;
+			img.src = img_data;
+		}
+
 		function handleFileSelect(evt) {
 			// these colors will be used to display if the check is positive or not
 			var truecolor = "ForestGreen";
@@ -129,7 +152,10 @@
 					img_data = reader.result.split(',');
 					b64_img = img_data[1];
 					b64_format = img_data[0];
+					// document.getElementById("image_info").innerHTML = b64_img.length
 					// console.log('RESULT', b64_img);
+
+					display_image(b64_format, b64_img);
 
 					var xhr = new XMLHttpRequest();
 					xhr.responseType = 'json';
@@ -184,23 +210,6 @@
 								okdiv.style.color = falsecolor;
 								okdiv.innerHTML = "Not Passed.";
 							}
-
-							// display image
-							// if (
-							// 	rdata.hasOwnProperty(autotransform_top_left_corner) &&
-							// 	rdata.hasOwnProperty(autotransform_bottom_right_corner)) {
-							if (true){
-								var base_image_display = document.getElementById("image_base");
-								var image_svg = document.getElementById("image_svg");
-								base_image_display.setAttribute("x", 0);
-								base_image_display.setAttribute("y", 0);
-								base_image_display.setAttribute("height", 640);
-								base_image_display.setAttribute("width", 480);
-								image_svg.setAttribute("height", 640);
-								image_svg.setAttribute("width", 480);
-								base_image_display.setAttribute("xlink:href", reader.result);
-							}
-
 						}
 					}
 
