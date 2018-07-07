@@ -70,7 +70,8 @@ class Face:
 
 class image_analyzer:
     def __init__(self, image_path: str,
-                 pretrained_predictor: str = datadir.joinpath("shape_predictor_68_face_landmarks.dat"),
+                 pretrained_predictor: str =
+                 datadir.joinpath("shape_predictor_68_face_landmarks.dat"),
                  upsample_num_times: int = 1
                  ):
         self._path = Path(image_path)
@@ -191,7 +192,8 @@ def main(argv):
 
     # CHECKS STARTING HERE:
     analyzer = image_analyzer(argv[1])
-    checks["ratio_correct"] = bool(analyzer.check_image_ratio(min=0.74, max=0.80))
+    checks["ratio_correct"] = bool(
+        analyzer.check_image_ratio(min=0.74, max=0.80))
     faces = [f for f in analyzer.faces()]
     checks["face_detected"] = bool(len(faces) > 0)
     if len(faces) == 1:
@@ -209,20 +211,24 @@ def main(argv):
         #      H line is more important, because V and H don't need to be perpendicular
         #       (f.eye_center()-f.mouth_center())[0] rund 0
         #          abs( -||- / ana.width() ) < 0.05 # weniger als 5% rotation
-        v_rotation = (face.eye_center() - face.mouth_center())[0] / analyzer.width()
+        v_rotation = (face.eye_center() - face.mouth_center()
+                      )[0] / analyzer.width()
         checks["v_line_almost_vertical"] = bool(abs(v_rotation) < 0.05)
         checks["v_line_rotation"] = float(v_rotation)
 
         # III: Midpoint M needs to be in horizontal center and vertically 30%-50% from top
         #      f.eye_center()/[ana.width(),ana.height()] = [ 0.45 <= x <= 0.55 , 0.30 <= y <= 0.50 ]
         m_rel = face.eye_center() / [analyzer.width(), analyzer.height()]
-        checks["midpoint_in_vertical_center"] = bool((m_rel[0] >= 0.45) and (m_rel[0] <= 0.55))
-        checks["midpoint_in_upper_half"] = bool((m_rel[1] >= 0.30) and (m_rel[1] <= 0.50))
+        checks["midpoint_in_vertical_center"] = bool(
+            (m_rel[0] >= 0.45) and (m_rel[0] <= 0.55))
+        checks["midpoint_in_upper_half"] = bool(
+            (m_rel[1] >= 0.30) and (m_rel[1] <= 0.50))
         checks["midpoint"] = [float(d) for d in m_rel]
 
         #  IV: Headwith ratio
         head_width_ratio = face.rect().width() / analyzer.width()
-        checks["head_width_correct"] = bool((head_width_ratio >= 0.5) and (head_width_ratio <= 0.75))
+        checks["head_width_correct"] = bool(
+            (head_width_ratio >= 0.5) and (head_width_ratio <= 0.75))
         checks["head_width_ratio"] = float(head_width_ratio)
 
         if show_rectangle:
@@ -231,7 +237,8 @@ def main(argv):
             cv2.setWindowProperty("Bild", cv2.WND_PROP_FULLSCREEN,
                                   cv2.WINDOW_FULLSCREEN)
             rect = face.rect()
-            cv2.rectangle(img, (rect.left(), rect.top()), (rect.right(), rect.bottom()),  (0, 255, 255))
+            cv2.rectangle(img, (rect.left(), rect.top()),
+                          (rect.right(), rect.bottom()),  (0, 255, 255))
             cv2.imshow("Bild", img)
             while(1):
                 k = cv2.waitKey(33)

@@ -323,14 +323,16 @@ class Face:
         #   0.74 and 0.80 are ( 0.77 [+|-] 0.03 )
         #   assuming:
         #   (7/9)-(1/30) and (7/9)+(1/30)
+        #m_to_bottom = 1 - midpoint_top_distance
         m_to_bottom = 1 - midpoint_top_distance
 
         # b = image height
-        b = w / image_ratio
-        leftest_on_h = self.midpoint() - self.h_line_direction() * (2 / a)
-        rightest_on_h = self.midpoint() + self.h_line_direction() * (2 / a)
-        bottom_on_ht = self.midpoint() - rotate_left(self.h_line_direction()) * m_to_bottom
-        top_on_ht = bottom_on_ht + rotate_left(self.h_line_direction()) * b
+        b = a / image_ratio
+        leftest_on_h = self.midpoint() - self.h_line_direction() * (a / 2)
+        rightest_on_h = self.midpoint() + self.h_line_direction() * (a / 2)
+        bottom_on_ht = self.midpoint() + (rotate_left(self.h_line_direction())
+                                          * self.face_height() * m_to_bottom)
+        top_on_ht = bottom_on_ht - rotate_left(self.h_line_direction()) * b
 
         return [
             line_intersection(
@@ -354,6 +356,22 @@ class Face:
                 bottom_on_ht,
                 self.h_line_direction())
         ]
+
+    def in_image(self, points):
+        return all([(
+            (0 < p[0] < len(self._img[0])) and
+            (0 < p[1] < len(self._img))
+        ) for p in self.shape()])
+
+    def optimizeable(self,
+                     side_distance: float = (3 / 16),
+                     midpoint_top_distance: float = (5 / 12),
+                     image_ratio: float = (7 / 9)):
+        return self.in_image(self.optimal_image_corners(
+            side_distance=side_distance,
+            midpoint_top_distance=midpoint_top_distance,
+            image_ratio=image_ratio)
+        )
 
 
 def main(argv):
