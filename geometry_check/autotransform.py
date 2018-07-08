@@ -92,6 +92,15 @@ def load_image(image_path: str):
     return _img
 
 
+def save_image(output_path: str, img):
+    _path = Path(output_path)
+    if _path.parent.exists():
+        return cv2.imwrite(str(_path.resolve()), img)
+    else:
+        raise FileNotFoundError("Path does not exist: " + str(_path))
+        return None
+
+
 class image_analyzer:
     def __init__(self, image,
                  pretrained_predictor: str = datadir.joinpath(
@@ -116,6 +125,12 @@ class image_analyzer:
 
     def check_image_ratio(self, min: float=0.74, max: float=0.80):
         return (min <= self.image_ratio() <= max)
+
+    def in_image(self, points):
+        return all([(
+            (0 < p[0] < len(self._img[0])) and
+            (0 < p[1] < len(self._img))
+        ) for p in points])
 
     def face_detector(self):
         # get static face detector
@@ -287,10 +302,10 @@ class Face:
                 [0, 1, -m[1]],
                 [0, 0,     1]]
 
-    def supertransformationmatrix(self,
-                                  side_distance: float = (3 / 16),
-                                  midpoint_top_distance: float = (5 / 12),
-                                  image_ratio: float = (7 / 9)):
+    def optimal_transform_matrix(self,
+                                 side_distance: float = (1 / 4),
+                                 midpoint_top_distance: float = (5 / 12),
+                                 image_ratio: float = (7 / 9)):
         first_trans = np.dot(self.rotation_matrix(),
                              self.translation_to_0_matrix())
         cs = self.optimal_image_corners(side_distance=side_distance,
@@ -303,7 +318,7 @@ class Face:
         return np.dot(final_trans, first_trans)
 
     def optimal_image_corners(self,
-                              side_distance: float = (3 / 16),
+                              side_distance: float = (1 / 4),
                               midpoint_top_distance: float = (5 / 12),
                               image_ratio: float = (7 / 9)):
         # w = head width
@@ -316,6 +331,8 @@ class Face:
         #       ((1/2)+(3/4))/2 = 5/8 = 0.625
         # optimal distance from ear to image border (side_distance):
         #       (1-(5/8))/2 = 3/16
+        # to account for ears (which dlib doesn't provide) add approximatly 1/3
+        #       4/16 = 1/4
         a = w * (1 + 2 * side_distance)
         # optimal picture ratio:
         #   common professional picture ratio is 35mm/45mm
@@ -323,7 +340,7 @@ class Face:
         #   0.74 and 0.80 are ( 0.77 [+|-] 0.03 )
         #   assuming:
         #   (7/9)-(1/30) and (7/9)+(1/30)
-        #m_to_bottom = 1 - midpoint_top_distance
+        # m_to_bottom = 1 - midpoint_top_distance
         m_to_bottom = 1 - midpoint_top_distance
 
         # b = image height
@@ -361,10 +378,10 @@ class Face:
         return all([(
             (0 < p[0] < len(self._img[0])) and
             (0 < p[1] < len(self._img))
-        ) for p in self.shape()])
+        ) for p in points])
 
     def optimizeable(self,
-                     side_distance: float = (3 / 16),
+                     side_distance: float = (1 / 4),
                      midpoint_top_distance: float = (5 / 12),
                      image_ratio: float = (7 / 9)):
         return self.in_image(self.optimal_image_corners(
@@ -376,37 +393,31 @@ class Face:
 
 def main(argv):
     checks = dict({
-        "top_left_corner": None,
-        "top_right_corner": None,
-        "bottom_left_corner": None,
-        "bottom_right_corner": None,
-        "transformable": False
+        "optimizeable": False,
+        "ratio": 0,
+        "ratio2": 0
     })
 
     # CHECKS STARTING HERE:
-    analyzer = image_analyzer(load_image(argv[1]))
+    img = load_image(argv[1])
+    analyzer = image_analyzer(img)
     faces = [f for f in analyzer.faces()]
     if len(faces) == 1:
         face = faces[0]
-        tl = face.top_left_corner()
-        tr = face.top_right_corner()
-        bl = face.bottom_left_corner()
-        br = face.bottom_right_corner()
-        checks["top_left_corner"] = [float(d) for d in tl]
-        checks["top_right_corner"] = [float(d) for d in tr]
-        checks["bottom_left_corner"] = [float(d) for d in bl]
-        checks["bottom_right_corner"] = [float(d) for d in br]
-        checks["transformable"] = bool(
-            0 <= tl[0] <= analyzer.width() and
-            0 <= tl[1] <= analyzer.height() and
-            0 <= tr[0] <= analyzer.width() and
-            0 <= tr[1] <= analyzer.height() and
-            0 <= bl[0] <= analyzer.width() and
-            0 <= bl[1] <= analyzer.height() and
-            0 <= br[0] <= analyzer.width() and
-            0 <= br[1] <= analyzer.height())
-        if checks["transformable"]:
-            pass
+        corn = face.optimal_image_corners()
+        opt_w = int(np.ceil(np.linalg.norm(corn[1][0:2] - corn[0][0:2])))
+        opt_h = int(np.ceil(np.linalg.norm(corn[2][0:2] - corn[0][0:2])))
+        checks["ratio"] = [opt_w, opt_h]
+        checks["optimizeable"] = analyzer.in_image(corn)
+        if checks["optimizeable"]:
+            checks["ratio2"] = img.shape[:2]
+            img_transformed = cv2.warpAffine(img,
+                                             face.optimal_transform_matrix()[
+                                                 0:2],
+                                             img.shape[1::-1]
+                                             )[:opt_h, :opt_w]
+            checks["ratio3"] = img_transformed.shape
+            save_image(argv[2], img_transformed)
     return checks
 
 

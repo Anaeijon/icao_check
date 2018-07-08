@@ -25,7 +25,7 @@ print(autotransform.rotate_left(f.h_line_direction()))
 print()
 
 corn = f.optimal_image_corners()
-corn2 = np.dot(f.supertransformationmatrix(), np.matrix.transpose(
+corn2 = np.dot(f.optimal_transform_matrix(), np.matrix.transpose(
     np.array([[p[0], p[1], 1] for p in corn])))
 opt_w = int(np.ceil(np.linalg.norm(corn[1][0:2] - corn[0][0:2])))
 opt_h = int(np.ceil(np.linalg.norm(corn[2][0:2] - corn[0][0:2])))
@@ -46,7 +46,7 @@ while cv2.waitKey() != 27:
 
 # reload(autotransform)
 print("Supertransformationmatrix:")
-print(f.supertransformationmatrix())
+print(f.optimal_transform_matrix())
 print()
 print("All Corners in Image:")
 print(f.optimizeable())
@@ -58,8 +58,8 @@ M0 = np.array([np.array([1, 0, 0]), np.array([0, 1, 0])])
 M0 = np.array([np.float32([1, 0, 0]), np.float32([0, 1, 0])])
 
 cv2.imshow("Bild", cv2.warpAffine(
-    # img, f.supertransformationmatrix()[0:2], img.shape[:2]))
-    img, f.supertransformationmatrix()[0:2], img.shape[:2])[0:opt_h, 0:opt_w])
+    # img, f.optimal_transform_matrix()[0:2], img.shape[:2]))
+    img, f.optimal_transform_matrix()[0:2], img.shape[:2])[0:opt_h, 0:opt_w])
 cv2.waitKey(1000)
 while cv2.waitKey() != 27:
     print("Press ESC to exit")

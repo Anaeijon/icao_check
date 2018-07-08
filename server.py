@@ -63,11 +63,13 @@ def ad_icaocheck():
     # Run AUTOROTATION
     #     by David Doering
     ###################################################
+    # WARNING: THIS WILL OVERWRITE THE FILE, IF TRANSFORM POSSIBLE
     if autotransform:
         try:
             o = check_output(
                 ['./geometry_check/icao-venv/bin/python3',
                  './geometry_check/autotransform.py',
+                 f.name,
                  f.name],
                 timeout=180
             )
