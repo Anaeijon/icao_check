@@ -5,6 +5,7 @@
 #           dlib
 
 import os
+import base64
 from pathlib import Path
 import sys
 import cv2
@@ -331,8 +332,8 @@ class Face:
         #       ((1/2)+(3/4))/2 = 5/8 = 0.625
         # optimal distance from ear to image border (side_distance):
         #       (1-(5/8))/2 = 3/16
-        # to account for ears (which dlib doesn't provide) add approximatly 1/3
-        #       4/16 = 1/4
+        # to assume ears (which dlib doesn't provide) add approximatly 1/3 to head width
+        #       3/16 + (3/16 * 1/3) = 3/16 + 1/16 = 4/16 = 1/4
         a = w * (1 + 2 * side_distance)
         # optimal picture ratio:
         #   common professional picture ratio is 35mm/45mm
@@ -345,10 +346,16 @@ class Face:
 
         # b = image height
         b = a / image_ratio
+
+        bottom_based_on_chin = self.face_height() * m_to_bottom
+        bottom_based_on_midpoint = b / 2
+
+        bottom_dist = max([bottom_based_on_chin, bottom_based_on_midpoint])
+
         leftest_on_h = self.midpoint() - self.h_line_direction() * (a / 2)
         rightest_on_h = self.midpoint() + self.h_line_direction() * (a / 2)
         bottom_on_ht = self.midpoint() + (rotate_left(self.h_line_direction())
-                                          * self.face_height() * m_to_bottom)
+                                          * bottom_dist)
         top_on_ht = bottom_on_ht - rotate_left(self.h_line_direction()) * b
 
         return [

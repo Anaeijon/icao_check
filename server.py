@@ -51,13 +51,13 @@ def ad_icaocheck():
     # dump image to file
     # Idea: In future just give base64 data directly to subprocesses,
     #       so they don't need to load the files.
-    f = tempfile.NamedTemporaryFile(mode='wb')
+    f = tempfile.NamedTemporaryFile(mode='wb', suffix="." + fmt)
     f.write(img_base64)
     f.seek(0)
 
-    # output dict will be returned to client
-    output = dict()
-    # output['imageData'] = dict({'documentImage': base64.b64encode(img_base64)})
+    # output_checks dict will be returned to client
+    output_checks = dict()
+    # check_output['imageData'] = dict({'documentImage': base64.b64encode(img_base64)})
 
     ###################################################
     # Run AUTOROTATION
@@ -76,14 +76,14 @@ def ad_icaocheck():
             odct = json.loads(o)
             editdct = dict(("autotransform_" + key, value)
                            for (key, value) in odct.items())
-            output.update(editdct)
+            output_checks.update(editdct)
         except CalledProcessError:
-            output['correctly_executed'] = False
-            output['Error'] = output.get(
+            output_checks['correctly_executed'] = False
+            output_checks['Error'] = output_checks.get(
                 'Error', '') + 'error executing autotransform;'
         except ValueError:
-            output['correctly_executed'] = False
-            output['Error'] = output.get(
+            output_checks['correctly_executed'] = False
+            output_checks['Error'] = output_checks.get(
                 'Error', '') + 'JSON parsing error autotransform;'
 
     ###################################################
@@ -100,14 +100,14 @@ def ad_icaocheck():
         odct = json.loads(o)
         editdct = dict(("geometry_" + key, value)
                        for (key, value) in odct.items())
-        output.update(editdct)
+        output_checks.update(editdct)
     except CalledProcessError:
-        output['correctly_executed'] = False
-        output['Error'] = output.get(
+        output_checks['correctly_executed'] = False
+        output_checks['Error'] = output_checks.get(
             'Error', '') + 'error executing geometry_check;'
     except ValueError:
-        output['correctly_executed'] = False
-        output['Error'] = output.get(
+        output_checks['correctly_executed'] = False
+        output_checks['Error'] = output_checks.get(
             'Error', '') + 'JSON parsing error geometry_check;'
 
     ###################################################
@@ -124,22 +124,29 @@ def ad_icaocheck():
         odct = json.loads(o)
         editdct = dict(("neutralface_" + key, value)
                        for (key, value) in odct.items())
-        output.update(editdct)
+        output_checks.update(editdct)
     except CalledProcessError as e:
-        output['correctly_executed'] = False
-        output['Error'] = output.get(
+        output_checks['correctly_executed'] = False
+        output_checks['Error'] = output_checks.get(
             'Error', '') + 'error executing neutral_face;'
-        output['Error_msg'] = output.get('Error_msg', '') + e.output.decode()
+        output_checks['Error_msg'] = output_checks.get(
+            'Error_msg', '') + e.output.decode()
     except ValueError:
-        output['correctly_executed'] = False
-        output['Error'] = output.get(
+        output_checks['correctly_executed'] = False
+        output_checks['Error'] = output_checks.get(
             'Error', '') + 'JSON parsing error neutral_face;'
-        output['Error_msg'] = output.get('Error_msg', '') + o
+        output_checks['Error_msg'] = output_checks.get('Error_msg', '') + o
 
+    with open(f.name, "rb") as f:
+        f.seek(0)
+        b64_output_data = f.read()
     f.close()
 
-    # jsonify output and send back to requester
-    return jsonify(output), 200
+    # jsonify output_checks and send back to requester
+    return jsonify({'checks': output_checks,
+                    'imageData': {
+                        'documentImage': base64.b64encode(b64_output_data)
+                    }}), 200
 
 
 if __name__ == '__main__':

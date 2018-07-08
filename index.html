@@ -82,7 +82,7 @@
 
 	<div class="center" id="image_div">
 		<div id="image_info"> </div>
-		<svg id="image_svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" >
+		<svg id="image_svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 			<image
      		xlink:href=""
 				id="image_base"
@@ -107,7 +107,7 @@
 	<script>
 		function display_image(b64_format, b64_img) {
 			var img = new Image();
-			img.onload = function(){
+			img.onload = function() {
 				var max_width = document.getElementById("image_div").clientWidth - 20;
 				var width = max_width;
 				var height = img.height * (max_width / img.width)
@@ -147,6 +147,9 @@
 				var reader = new FileReader();
 
 				reader.onload = function() {
+					okdiv = document.getElementById("everything_ok");
+					okdiv.style.color = 'darkBlue';
+					okdiv.innerHTML = "loading File";
 					// load image file b64 encoded
 					// b64_img = encodeURIComponent(reader.result.split(',')[1]);
 					img_data = reader.result.split(',');
@@ -161,8 +164,29 @@
 					xhr.responseType = 'json';
 					xhr.open('POST', '/api/icaochecker');
 					xhr.setRequestHeader('Content-Type', 'application/json');
+					xhr.ontimeout = function() {
+							okdiv = document.getElementById("everything_ok");
+							okdiv.style.color = 'darkBlue';
+							okdiv.innerHTML = "Timeout while communicating with server.";
+					}
 					xhr.onreadystatechange = function() {
-						if (xhr.readyState == 4 && xhr.status == 200) {
+						if (xhr.readyState == 0) {
+							okdiv = document.getElementById("everything_ok");
+							okdiv.style.color = 'darkBlue';
+							okdiv.innerHTML = "initializing";
+						} else if (xhr.readyState == 1) {
+								okdiv = document.getElementById("everything_ok");
+								okdiv.style.color = 'darkBlue';
+								okdiv.innerHTML = "Please Wait.";
+						} else if (xhr.readyState == 2) {
+								okdiv = document.getElementById("everything_ok");
+								okdiv.style.color = 'darkBlue';
+								okdiv.innerHTML = "Please Wait..";
+						} else if (xhr.readyState == 3) {
+								okdiv = document.getElementById("everything_ok");
+								okdiv.style.color = 'darkBlue';
+								okdiv.innerHTML = "Please Wait...";
+						}	else if (xhr.readyState == 4 && xhr.status == 200) {
 							var rdata = xhr.response;
 							console.log('SERVER ANSWER:', JSON.stringify(rdata, null, 4));
 							var data_table = document.getElementById('data_table');
@@ -177,25 +201,35 @@
 							everything_ok = true;
 
 							// simply display all json data for now:
-							for (var key in rdata) {
-								if (rdata.hasOwnProperty(key)) {
-									console.log(key + " -> " + rdata[key]);
-									var tr = new_tbody.insertRow();
-									var td_name = tr.insertCell();
-									var td_val = tr.insertCell();
-									td_name.appendChild(document.createTextNode(key));
-									td_val.appendChild(document.createTextNode(JSON.stringify(rdata[key], null, 2)));
-									if (typeof(rdata[key]) == typeof(true)) {
-										if (rdata[key]) {
-											td_val.style.color = truecolor;
-										} else {
-											td_val.style.color = falsecolor;
-											everything_ok = false;
+							if (rdata.hasOwnProperty('checks')) {
+								checks = rdata['checks'];
+								for (var key in checks) {
+									if (checks.hasOwnProperty(key)) {
+										console.log(key + " -> " + checks[key]);
+										var tr = new_tbody.insertRow();
+										var td_name = tr.insertCell();
+										var td_val = tr.insertCell();
+										td_name.appendChild(document.createTextNode(key));
+										td_val.appendChild(document.createTextNode(JSON.stringify(checks[key], null, 2)));
+										if (typeof(checks[key]) == typeof(true)) {
+											if (checks[key]) {
+												td_val.style.color = truecolor;
+											} else {
+												td_val.style.color = falsecolor;
+												everything_ok = false;
+											}
 										}
-									}
 
+									}
 								}
 							}
+
+							if (rdata.hasOwnProperty('imageData') &&
+								rdata['imageData'].hasOwnProperty('documentImage')) {
+									b64_img = rdata['imageData']['documentImage']
+									display_image(b64_format, b64_img);
+							}
+
 							// remove old tbody and replace by newly created one
 							old_tbody.parentNode.replaceChild(new_tbody, old_tbody);
 							// set id to find tbody again
@@ -210,6 +244,11 @@
 								okdiv.style.color = falsecolor;
 								okdiv.innerHTML = "Not Passed.";
 							}
+						} else {
+							// something went wrong while requesting the SERVER
+							okdiv = document.getElementById("everything_ok");
+							okdiv.style.color = 'darkBlue';
+							okdiv.innerHTML = "Something went wrong. Sorry.";
 						}
 					}
 
